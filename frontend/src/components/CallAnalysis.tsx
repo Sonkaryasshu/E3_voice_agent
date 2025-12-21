@@ -29,19 +29,19 @@ export const CallAnalysis: FC<CallAnalysisProps> = ({ call }) => {
 
     // Structured fields to look for (from requirements)
     const structuredFields = {
-        'driver_status': { label: '🚦 Driver Status', icon: '🚚' },
-        'current_location': { label: '📍 Current Location', icon: '🗺️' },
-        'eta': { label: '⏰ ETA', icon: '⏱️' },
-        'delay_reason': { label: '⚠️ Delay Reason', icon: '🚧' },
-        'unloading_status': { label: '🏭 Unloading Status', icon: '📦' },
-        'pod_acknowledged': { label: '✅ POD Acknowledged', icon: '📝' },
-        'call_outcome': { label: '🎯 Call Outcome', icon: '🎬' },
-        'emergency_type': { label: '🚨 Emergency Type', icon: '⚠️' },
-        'safety_status': { label: '🛡️ Safety Status', icon: '✓' },
-        'injury_status': { label: '🏥 Injury Status', icon: '🩹' },
-        'emergency_location': { label: '📍 Emergency Location', icon: '🆘' },
-        'load_secure': { label: '🔒 Load Secure', icon: '📦' },
-        'escalation_status': { label: '📞 Escalation', icon: '☎️' },
+        'driver_status': { label: 'Driver Status', icon: '🚚' },
+        'current_location': { label: 'Current Location', icon: '🗺️' },
+        'eta': { label: 'ETA', icon: '⏱️' },
+        'delay_reason': { label: 'Delay Reason', icon: '🚧' },
+        'unloading_status': { label: 'Unloading Status', icon: '📦' },
+        'pod_acknowledged': { label: 'POD Acknowledged', icon: '📝' },
+        'call_outcome': { label: 'Call Outcome', icon: '🎬' },
+        'emergency_type': { label: 'Emergency Type', icon: '⚠️' },
+        'safety_status': { label: 'Safety Status', icon: '✓' },
+        'injury_status': { label: 'Injury Status', icon: '🩹' },
+        'emergency_location': { label: 'Emergency Location', icon: '🆘' },
+        'load_secure': { label: 'Load Secure', icon: '📦' },
+        'escalation_status': { label: 'Escalation', icon: '☎️' },
     };
 
     const handleSeek = (ms: number) => {
@@ -59,7 +59,7 @@ export const CallAnalysis: FC<CallAnalysisProps> = ({ call }) => {
                 <div className="flex items-start justify-between mb-4">
                     <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                         <span className="text-2xl">🤖</span>
-                        AI Analysis
+                        AI Summary
                     </h3>
                     <div className="flex gap-2">
                         {reportValidity && (
@@ -71,7 +71,7 @@ export const CallAnalysis: FC<CallAnalysisProps> = ({ call }) => {
                 </div>
 
                 <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <p className="text-sm font-medium text-slate-600 mb-2">Call Summary</p>
+                    {/* <p className="text-sm font-medium text-slate-600 mb-2">Call Summary</p> */}
                     <p className="text-slate-700 leading-relaxed">{summary}</p>
                 </div>
             </div>
@@ -85,10 +85,6 @@ export const CallAnalysis: FC<CallAnalysisProps> = ({ call }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {Object.entries(structuredFields).map(([key, config]) => {
                         const dataPoint = extractedRoot[key];
-                        // Data point could be:
-                        // 1. { value: "...", timestamp_ms: ... } (New format)
-                        // 2. "Value directly" (Legacy/Fallback)
-                        // 3. undefined
 
                         if (dataPoint === undefined || dataPoint === null) return null;
 
@@ -107,31 +103,30 @@ export const CallAnalysis: FC<CallAnalysisProps> = ({ call }) => {
                         if (displayValue === 'false') displayValue = 'No';
 
                         return (
-                            <div key={key} className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:border-blue-300 transition-colors group">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1 flex items-center gap-1">
-                                            {config.label}
-                                        </p>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-sm font-semibold text-slate-900">
-                                                {displayValue}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1">
-                                        <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">{config.icon}</span>
-                                        {timestamp !== null && (
-                                            <button
-                                                onClick={() => handleSeek(timestamp as number)}
-                                                className="text-xs flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
-                                                title={`Jump to ${timestamp}ms`}
-                                            >
-                                                <PlayCircle size={10} />
-                                                {(timestamp / 1000).toFixed(1)}s
-                                            </button>
-                                        )}
-                                    </div>
+                            <div key={key} className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:border-blue-300 transition-colors group flex flex-col gap-2">
+                                {/* Top Row: Icon + Label */}
+                                <div className="flex items-center gap-2 text-slate-500">
+                                    <span className="text-base opacity-70 flex-shrink-0">{config.icon}</span>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider truncate" title={config.label}>
+                                        {config.label}
+                                    </p>
+                                </div>
+
+                                {/* Bottom Row: Timestamp + Value */}
+                                <div className="flex items-start justify-between gap-2 w-full">
+                                    <p className="text-sm font-semibold text-slate-900 leading-snug break-words flex-1">
+                                        {displayValue}
+                                    </p>
+                                    {timestamp !== null && (
+                                        <button
+                                            onClick={() => handleSeek(timestamp as number)}
+                                            className="flex-shrink-0 text-[10px] flex items-center gap-1 text-blue-600 bg-blue-100 hover:bg-blue-200 px-1.5 py-0.5 rounded transition-colors font-medium mt-0.5 ml-2"
+                                            title={`Jump to ${timestamp}ms`}
+                                        >
+                                            <PlayCircle size={10} />
+                                            {(timestamp / 1000).toFixed(1)}s
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );

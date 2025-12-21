@@ -107,9 +107,7 @@ async def manual_analyze_call(call_id: str):
         # Check if it's a UUID (our DB ID)
         db_call = supabase.table("calls").select("*").eq("id", call_id).execute()
         
-        retell_call_id = call_id
-        if db_call.data:
-            retell_call_id = db_call.data[0]['retell_call_id']
+        retell_call_id = db_call.data[0]['retell_call_id']
         
         # Fetch from Retell
         headers = {"Authorization": f"Bearer {retell_api_key}"}
@@ -138,17 +136,25 @@ async def manual_analyze_call(call_id: str):
         if call_status == "ended":
              update_data["status"] = "completed"
 
-        supabase.table("calls").update(update_data).eq("retell_call_id", retell_call_id).execute()
+        supabase.table("calls").update(update_data).eq("id", call_id).execute()
 
         # 4. Run Analysis
         print(f"[MANUAL ANALYSIS] Starting analysis for {retell_call_id}")
-        analysis_result = analyze_call_transcript(transcript_object)
+        
+        # Get the call record for context
+        call_record = db_call.data[0]
+        context = {
+            "driver_name": call_record.get("driver_name"),
+            "load_number": call_record.get("load_number"),
+            "metadata": call_record.get("metadata")
+        }
+        analysis_result = analyze_call_transcript(transcript_object, context)
         
         final_update = {
             "status": "analyzed",
             "analysis_json": analysis_result
         }
-        supabase.table("calls").update(final_update).eq("retell_call_id", retell_call_id).execute()
+        supabase.table("calls").update(final_update).eq("id", call_id).execute()
         
         return {"success": True, "analysis": analysis_result}
 

@@ -18,26 +18,37 @@ Example:
 ]
 
 ### EXTRACTION GOAL
-Extract the following fields. If a field is NOT mentioned or cannot be inferred, set its valid key to false or null.
+Extract the following fields. If a field is NOT mentioned or cannot be inferred, DO NOT include it in the JSON output (omit the key entirely). Do not return null or "null" or empty values.
+
 For every extracted fact, you MUST provide:
 1. `value`: The extracted information string or boolean.
-2. `timestamp_ms`: The approximate timestamp (in milliseconds) from the transcript where this information was first spoken by the USER. Use the `timestamp` of the user's message.
+2. `timestamp_ms`: The approximate timestamp (in milliseconds) from the transcript where this information was first discussed. Use the `timestamp` of the message from transcript.
 
 ### FIELDS TO EXTRACT
-1. `driver_status`: (String) e.g., "Driving", "Stopped", "Unloading", "Delayed".
-2. `current_location`: (String) The specific location mentioned.
-3. `eta`: (String) Estimated Time of Arrival.
-4. `delay_reason`: (String) Why they are delayed (Traffic, Weather, Breakdown, None).
-5. `pod_acknowledged`: (Boolean) Did they agree to upload the Proof of Delivery?
-6. `emergency_type`: (String) "None", "Accident", "Medical", "Mechanism Failure".
-7. `load_secure`: (Boolean) Is the cargo safe?
-8. `safety_status`: (String) Are specific people safe?
+1. `call_outcome`: (String) REQUIRED. A concise, descriptive summary of the call's result. 
+   - Examples: "In-Transit Update", "Arrival Confirmation", "Emergency Escalation", "Voicemail", "No Dialogue", "Rescheduled", "Wrong Number".
+   - Be specific and capture the actual outcome even if unique (e.g., "Driver Refused Load").
+   - If audio/transcript is empty or just "Hello?", use "No Dialogue".
+   - Give priority to emergency over other outcomes.
+2. `driver_status`: (String) e.g., "Driving", "Stopped", "Unloading", "Delayed", etc.
+3. `current_location`: (String) The specific location mentioned. eg. "I-80 near Reno".
+4. `eta`: (String) Estimated Time of Arrival. eg. "Tomorrow, 8:00 AM" or "23rd Dec, 2:00 PM".
+5. `delay_reason`: (String) If delayed, why? e.g., "Heavy Traffic", "Weather"
+6. `unloading_status`: (String) "Started", "Waiting", "Done", etc.
+7. `pod_acknowledged`: (Boolean) Did they confirm they will handle POD?
+8. `emergency_type`: (String) If emergency, what type? eg. "Accident", "Medical", "Mechanism Failure"
+9. `safety_status`: (String) In case if an emergency, Is everyone safe? e.g. "Driver confirmed everyone is safe"
+10. `injury_status`: (String) In case if an emergency, Any injuries? e.g. "No injuries reported"
+11. `emergency_location`: (String) In case if an emergency, Specific location of emergency.
+12. `load_secure`: (Boolean) In case if an emergency, Is the load secure?
+13. `escalation_status`: (Boolean) Was call transferred or escalation promised? eg. "Connected to Human Dispatcher" or "Human callback promised"
+14. any other fields that you think are relevant that agent may have asked.
 
 ### OUTPUT FORMAT
-Return a SINGLE JSON object with this structure:
+Return a SINGLE JSON object with this structure. Omit keys that are null/unknown. `call_outcome` is mandatory.
 {
-  "call_summary": "A brief 1-sentence summary of the call outcome.",
-  "data_validity": "valid" | "invalid" | "partial", (Invalid if transcript is empty, garbled, or no useful info),
+  "call_summary": "Check-in with driver John. He is in Phoenix...",
+  "data_validity": "valid" | "no-transcript" | "noisy-transcript" | etc.,
   "extracted_data": {
     "driver_status": { "value": "...", "timestamp_ms": 1234 },
     "current_location": { "value": "...", "timestamp_ms": 5678 },
@@ -47,27 +58,33 @@ Return a SINGLE JSON object with this structure:
 
 ### RULES
 - Be precise.
-- If data is missing, omit the key from `extracted_data` or set it to null.
-- If the user is uncooperative or the call is empty, set `data_validity` to "invalid".
+- If data is missing, omit the key from `extracted_data`, don't return null/empty values.
+- If the user is uncooperative or the call is empty, can set `data_validity` to "unclear dialogue".
 """
 
-def analyze_call_transcript(transcript_object: List[Dict[str, Any]]) -> Dict[str, Any]:
+def analyze_call_transcript(transcript_object: List[Dict[str, Any]], call_context: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     Analyzes the call transcript using OpenAI to extract structured data with timestamps.
     """
     try:
-        # Prepare the conversation for the model
-        # We pass the raw object so the model can see timestamps
-        user_message = json.dumps(transcript_object, indent=2)
+        if not transcript_object:
+            return {"call_summary": "No transcript available.", "data_validity": "invalid", "extracted_data": {}}
+
+        # Add context to the user message
+        context_str = ""
+        if call_context:
+            context_str = f"### CALL CONTEXT\n{json.dumps(call_context, indent=2)}\n\n"
+
+        user_message = f"{context_str}### TRANSCRIPT\n{json.dumps(transcript_object, indent=2)}"
         
         response = client.chat.completions.create(
-            model="gpt-4-turbo-preview",  # Or gpt-3.5-turbo-json if preferred for speed
+            model="gpt-4o",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"Analyze this transcript:\n{user_message}"}
+                {"role": "user", "content": user_message}
             ],
-            temperature=0.1
+            temperature=0.0
         )
         
         result_json = response.choices[0].message.content

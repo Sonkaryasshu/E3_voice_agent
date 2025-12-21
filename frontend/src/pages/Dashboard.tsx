@@ -26,6 +26,18 @@ export const Dashboard = () => {
     // Selected Call for Details
     const [selectedCall, setSelectedCall] = useState<Call | null>(null);
 
+    // Audio Sync State
+    const [currentTime, setCurrentTime] = useState(0);
+
+    useEffect(() => {
+        const audio = document.getElementById("main-audio-player") as HTMLAudioElement;
+        if (!audio) return;
+
+        const updateTime = () => setCurrentTime(audio.currentTime);
+        audio.addEventListener("timeupdate", updateTime);
+        return () => audio.removeEventListener("timeupdate", updateTime);
+    }, [selectedCall?.id]); // Re-attach listener when call changes
+
     useEffect(() => {
         loadData();
         const interval = setInterval(loadCalls, 5000); // Poll for updates
@@ -219,27 +231,45 @@ export const Dashboard = () => {
                 </div>
             </div >
 
+
             {/* RIGHT COLUMN: Call Details */}
             < div className="lg:col-span-2" >
                 {
                     selectedCall ? (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-full flex flex-col" >
+                            {/* Header */}
                             <div className="flex justify-between items-start mb-6 pb-6 border-b border-slate-100">
                                 <div>
                                     <h1 className="text-2xl font-bold text-slate-900 mb-2">{selectedCall.driver_name}</h1>
-                                    <div className="flex items-center space-x-4 text-sm text-slate-600">
-                                        <span className="flex items-center"><PhoneCall size={16} className="mr-1" /> {selectedCall.driver_phone}</span>
-                                        <span className="flex items-center"><Truck size={16} className="mr-1" /> Load: {selectedCall.load_number}</span>
+                                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mb-3">
+                                        <span className="flex items-center gap-1"><PhoneCall size={16} className="text-slate-400" /> {selectedCall.driver_phone}</span>
+                                        <span className="flex items-center gap-1"><Truck size={16} className="text-slate-400" /> #{selectedCall.load_number}</span>
+                                        <span className="flex items-center gap-1 text-xs bg-slate-100 px-2 py-1 rounded-full">
+                                            🤖 {agents.find(a => a.id === selectedCall.agent_id)?.name || "Unknown Agent"}
+                                        </span>
                                     </div>
+
+                                    {/* Additional Context (Metadata) - Compact Header View */}
+                                    {selectedCall.metadata && Object.keys(selectedCall.metadata).length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {Object.entries(selectedCall.metadata).map(([key, value]) => (
+                                                <span key={key} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 flex items-center gap-1">
+                                                    <Activity size={10} />
+                                                    <span className="font-semibold capitalize">{key.replace(/_/g, ' ')}:</span>
+                                                    {String(value)}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="text-right">
                                     <div className="text-sm text-slate-500 mb-1">Status</div>
                                     <StatusBadge status={selectedCall.status} large />
-                                    <div className="mt-2">
+                                    <div className="mt-2 text-right">
                                         <button
                                             onClick={() => handleReAnalyze(selectedCall.id)}
                                             disabled={analyzingCallId === selectedCall.id}
-                                            className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                                            className="text-xs inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
                                         >
                                             <RefreshCw size={12} className={analyzingCallId === selectedCall.id ? "animate-spin" : ""} />
                                             {analyzingCallId === selectedCall.id ? "Analyzing..." : "Analyze Again"}
@@ -248,14 +278,8 @@ export const Dashboard = () => {
                                 </div>
                             </div>
 
-                            {/* 1. Analyzed Data & Summary */}
-                            <div className="mb-6">
-                                <CallAnalysis call={selectedCall} />
-                            </div>
-
-                            {/* 2. Audio Player - Full Width, Standard Controls */}
                             {selectedCall.audio_url && (
-                                <div className="bg-slate-900 rounded-xl p-4 mb-6 shadow-md text-white sticky top-4 z-10">
+                                <div className="bg-slate-900 rounded-xl p-4 mb-6 shadow-md text-white">
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Audio Recording</h3>
                                         <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">ID: {selectedCall.retell_call_id}</span>
@@ -265,17 +289,29 @@ export const Dashboard = () => {
                                         controls
                                         src={selectedCall.audio_url}
                                         className="w-full h-10 accent-blue-500"
-                                        style={{ filter: "invert(1) hue-rotate(180deg)" }} // Quick trick for dark mode player
+                                        style={{ filter: "invert(1) hue-rotate(180deg)" }}
                                     />
                                 </div>
                             )}
 
-                            {/* 3. Transcript Waterfall */}
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                <h2 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-                                    <span>💬</span> Transcript
-                                </h2>
-                                <TranscriptViewer call={selectedCall} />
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full min-h-0">
+                                {/* LEFT SUB-COLUMN: Audio & Analysis */}
+                                <div className="overflow-y-auto">
+                                    {/* 2. Call Summary & Extracted Data */}
+                                    <div className="mb-6">
+                                        <CallAnalysis call={selectedCall} />
+                                    </div>
+                                </div>
+
+                                {/* RIGHT SUB-COLUMN: Transcript */}
+                                <div className="border-l border-slate-100 pl-6 flex flex-col h-[600px]">
+                                    <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2 flex-shrink-0">
+                                        <span>💬</span> Transcript
+                                    </h2>
+                                    <div className="flex-1 min-h-0">
+                                        <TranscriptViewer call={selectedCall} currentTime={currentTime} />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     ) : (

@@ -69,15 +69,20 @@ async def handle_retell_status(request: Request):
             # Then we upgrade it to "Analyzed".
             
             print("[WEBHOOK] Starting OpenAI analysis...")
-            analysis_result = analyze_call_transcript(transcript_object)
+            # Run analysis asynchronously or synchronously
+            context = {
+                "driver_name": call_data.get("driver_name"),
+                "load_number": call_data.get("load_number"),
+                "metadata": call_data.get("metadata")
+            }
+            analysis_result = analyze_call_transcript(transcript_object, context)
             print(f"[WEBHOOK] Analysis complete. Valid: {analysis_result.get('data_validity')}")
             
-            final_update_data = {
-                "status": "analyzed",
-                "analysis_json": analysis_result
-            }
-            
-            supabase.table("calls").update(final_update_data).eq("retell_call_id", call_id).execute()
+            # Update call with analysis
+            supabase.table("calls").update({
+                "analysis_json": analysis_result,
+                "status": "analyzed"
+            }).eq("retell_call_id", call_id).execute()
             print("[WEBHOOK] Call upgraded to 'analyzed'.")
             
         return {"received": True}
