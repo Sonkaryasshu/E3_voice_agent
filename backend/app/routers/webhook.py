@@ -41,22 +41,16 @@ async def handle_retell_status(request: Request):
 
         elif event == "call_ended":
             # Extract all relevant data from the call object
-            transcript = call_data.get("transcript", "")
             transcript_object = call_data.get("transcript_object", [])
             recording_url = call_data.get("recording_url", "")
             
-            # If transcript is empty, try building from transcript_object
-            if not transcript and transcript_object:
-                transcript = "\n".join([f"{t['role']}: {t['content']}" for t in transcript_object])
-            
-            print(f"[WEBHOOK] Transcript length: {len(transcript)} chars")
+            # Print minimal info
             print(f"[WEBHOOK] Transcript object entries: {len(transcript_object)}")
             print(f"[WEBHOOK] Recording URL: {recording_url}")
 
             # 1. Immediate Update: Completed
             update_data = {
                 "status": "completed",
-                # "transcript": transcript, # Legacy column ignored
                 "transcript_object": transcript_object,
                 "audio_url": recording_url,
             }
@@ -92,6 +86,6 @@ async def handle_retell_status(request: Request):
         print(f"[WEBHOOK] Error: {e}")
         import traceback
         traceback.print_exc()
-        # Return 200 to acknowledge receipt even on error to prevent retries
+        # Return 200 to acknowledge receipt even on error to prevent retries. As we already have UI driven retries.
         return {"received": True, "error": str(e)}
 

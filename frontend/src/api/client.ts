@@ -23,6 +23,10 @@ export const agentApi = {
         const response = await api.put(`/api/agents/${id}`, data);
         return response.data;
     },
+    delete: async (id: string) => {
+        const response = await api.delete(`/api/agents/${id}`);
+        return response.data;
+    },
     get: async (id: string) => {
         const response = await api.get(`/api/agents/${id}`);
         return response.data;

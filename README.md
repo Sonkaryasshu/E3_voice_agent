@@ -6,6 +6,7 @@ A full-stack web application to configure and test AI Voice Agents for logistics
 * **STS model**: skipping speech to speech models (more costly, but better quality)
 * **Performance**: voice lists caching and other performance related features are skipped for this demo
 * **Call transfer**: skipping call transfer for this demo
+* **Single Prompt**: For this demo we are just using single system prompt, in real world we will be using multiple flows/prompts.
 
 ## Features
 *   **Agent Configuration**: Define system prompts and voice settings.
@@ -30,7 +31,7 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_key
 RETELL_API_KEY=your_retell_key
 OPENAI_API_KEY=your_openai_key
-PUBLIC_URL=your-ngrok-url.ngrok-free.app  # Critical for WebSockets!
+PUBLIC_URL=your-ngrok-url.ngrok-free.app
 ```
 
 ### 2. Backend
@@ -42,7 +43,6 @@ cd backend
 ```
 
 ### 3. Frontend
-The admin dashboard.
 ```bash
 cd frontend
 npm install
@@ -51,15 +51,18 @@ npm run dev
 
 ## Enhanced Features
 ### Advanced Voice Configuration
-In the **Agent Config** page, you can now fine-tune:
+In the **Agent Config** page, you can fine-tune:
 *   **Interruption Sensitivity**: How easily the agent yields the floor.
 *   **Backchanneling**: "mhm", "uh-huh" behavior.
 *   **Speed & Temperature**: Control pacing and creativity.
 
 ### Dynamic Context Injection
-In the **Dashboard**, you can provide a JSON object in "Additional Context".
+In the **Dashboard**, you can provide a more info about driver or call by plain text and/or JSON object in "Additional Context" section.
+
 Example:
-```json
+```
+driver is having fever, please take update on his health also.
+
 {
   "last_location": "Phoenix Distribution Center",
   "driver_rating": 4.8,
@@ -72,10 +75,3 @@ This data is injected directly into the LLM's system prompt context for that spe
 1.  Start your backend (`./start.sh`) and expose it via ngrok (`ngrok http 8000`).
 2.  Update `PUBLIC_URL` in `.env` with your ngrok URL and restart backend.
 3.  Open Frontend (http://localhost:5173).
-4.  **Important**: Run the updated `schema.sql` in Supabase if you haven't!
-
-## Project Structure
-*   `frontend/`: React + Vite + Tailwind application.
-*   `backend/`: FastAPI application.
-    *   `app/routers/llm_websocket.py`: The core "Custom LLM" logic.
-    *   `app/services/llm_logic.py`: System prompts and Tool Definitions (Scenarios).

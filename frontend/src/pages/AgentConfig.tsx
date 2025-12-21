@@ -1,7 +1,94 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { Agent } from "../types";
 import { agentApi } from "../api/client";
-import { Plus, Save, Bot, Settings } from "lucide-react";
+import { Plus, Save, Bot, Settings, Trash2, Search, Check } from "lucide-react";
+
+// Voice Combobox Component
+const VoiceCombobox = ({
+    voices,
+    value,
+    onChange
+}: {
+    voices: any[],
+    value: string,
+    onChange: (voiceId: string) => void
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const filteredVoices = voices.filter(v =>
+        v.voice_name.toLowerCase().includes(search.toLowerCase()) ||
+        v.provider.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const selectedVoice = voices.find(v => v.voice_id === value);
+
+    return (
+        <div className="relative" ref={wrapperRef}>
+            <div
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 bg-white flex items-center justify-between cursor-pointer hover:border-slate-400 focus:ring-2 focus:ring-blue-500 transition-all"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <span className={value ? "text-slate-900" : "text-slate-400"}>
+                    {selectedVoice ? `${selectedVoice.voice_name} (${selectedVoice.provider})` : "Select a Voice..."}
+                </span>
+                <span className="text-slate-400">▼</span>
+            </div>
+
+            {isOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
+                    <div className="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
+                        <div className="relative">
+                            <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search voices..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md border border-slate-200 outline-none focus:border-blue-500"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <div className="overflow-y-auto max-h-48">
+                        {filteredVoices.length === 0 ? (
+                            <div className="p-3 text-center text-sm text-slate-400">No voices found</div>
+                        ) : (
+                            filteredVoices.map(voice => (
+                                <div
+                                    key={voice.voice_id}
+                                    onClick={() => {
+                                        onChange(voice.voice_id);
+                                        setIsOpen(false);
+                                        setSearch("");
+                                    }}
+                                    className={`px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer flex justify-between items-center ${value === voice.voice_id ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}
+                                >
+                                    <span>
+                                        <span className="font-medium">{voice.voice_name}</span>
+                                        <span className="text-xs text-slate-500 ml-2">({voice.provider})</span>
+                                    </span>
+                                    {value === voice.voice_id && <Check size={14} />}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export const AgentConfig = () => {
     const [agents, setAgents] = useState<Agent[]>([]);
@@ -164,22 +251,37 @@ Immediately:
 
     const handleSave = async () => {
         try {
-            if (selectedAgent) {
-                // Update
-                // Note: Backend might not support PUT directly yet, but assuming it does or we add it
-                // The implementation plan said "Create/Edit". 
-                // Let's assume create works for now.
-                // TODO: Agent Implement this flow fully.
-                console.warn("Update not fully implemented in backend yet, creating new likely.");
-                await agentApi.create(formData); // Fallback to create for specific task unless ID logic matches
+            if (selectedAgent && selectedAgent.id) {
+                // Update existing
+                await agentApi.update(selectedAgent.id, formData);
             } else {
+                // Create new
                 await agentApi.create(formData);
             }
             await loadAgents();
-            setIsEditing(false);
+
+            if (!selectedAgent?.id) {
+                setIsEditing(false);
+            }
+            alert("Agent saved successfully!");
         } catch (error) {
             console.error("Failed to save agent", error);
             alert("Failed to save agent");
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedAgent?.id) return;
+        if (!confirm(`Are you sure you want to delete "${selectedAgent.name}"? This cannot be undone.`)) return;
+
+        try {
+            await agentApi.delete(selectedAgent.id);
+            await loadAgents();
+            setSelectedAgent(null);
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Failed to delete agent", error);
+            alert("Failed to delete agent");
         }
     };
 
@@ -224,15 +326,26 @@ Immediately:
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-slate-900">
-                                {selectedAgent ? "Edit Agent" : "Create Agent"}
+                                {selectedAgent?.id ? "Edit Agent" : "Create New Agent"}
                             </h2>
-                            <button
-                                onClick={handleSave}
-                                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
-                            >
-                                <Save size={18} />
-                                <span>Save Configuration</span>
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {selectedAgent?.id && (
+                                    <button
+                                        onClick={handleDelete}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Delete Agent"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handleSave}
+                                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+                                >
+                                    <Save size={18} />
+                                    <span>{selectedAgent?.id ? "Update Agent" : "Create Agent"}</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-5">
@@ -249,18 +362,11 @@ Immediately:
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Voice Selection</label>
-                                <select
-                                    value={formData.voice_id}
-                                    onChange={(e) => setFormData({ ...formData, voice_id: e.target.value })}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                >
-                                    <option value="">Select a Voice...</option>
-                                    {voices.map((voice: any) => (
-                                        <option key={voice.voice_id} value={voice.voice_id}>
-                                            {voice.voice_name} ({voice.provider})
-                                        </option>
-                                    ))}
-                                </select>
+                                <VoiceCombobox
+                                    voices={voices}
+                                    value={formData.voice_id || ""}
+                                    onChange={(voiceId) => setFormData({ ...formData, voice_id: voiceId })}
+                                />
                             </div>
 
                             <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">

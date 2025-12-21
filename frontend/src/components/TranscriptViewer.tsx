@@ -35,16 +35,6 @@ export const TranscriptViewer: FC<TranscriptViewerProps> = ({ call, currentTime 
 
     // Fall back to plain transcript
     if (!transcriptObject || transcriptObject.length === 0) {
-        if (call.transcript) {
-            return (
-                <div className="h-full overflow-y-auto space-y-2 pr-2" ref={containerRef}>
-                    <p className="text-sm font-medium text-slate-600 mb-3">Transcript (Plain Text)</p>
-                    <div className="bg-slate-50 rounded-lg p-4 font-mono text-sm text-slate-700 whitespace-pre-wrap">
-                        {call.transcript}
-                    </div>
-                </div>
-            );
-        }
         return <p className="text-slate-400 text-sm">No transcript available</p>;
     }
 
@@ -53,10 +43,6 @@ export const TranscriptViewer: FC<TranscriptViewerProps> = ({ call, currentTime 
             <div className="space-y-6 pb-4">
                 {transcriptObject.map((message: any, index) => {
                     const isAgent = message.role === 'agent';
-
-                    // Check if this message is active (based on words if available, or just broad timestamp if we had it)
-                    // Retell Transcript Object structure: words: [{ word, start, end }]
-                    // We check if currentTime is within the start of first word and end of last word
                     const words = message.words || [];
                     let isActive = false;
                     if (words.length > 0) {

@@ -16,6 +16,21 @@ if [ -z "$PUBLIC_URL" ]; then
     exit 1
 fi
 
+if [ -z "$RETELL_API_KEY" ]; then
+    echo "❌ RETELL_API_KEY is not set in .env"
+    exit 1
+fi
+
+if [ -z "$SUPABASE_URL" ]; then
+    echo "❌ SUPABASE_URL is not set in .env"
+    exit 1
+fi
+
+if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+    echo "❌ SUPABASE_SERVICE_ROLE_KEY is not set in .env"
+    exit 1
+fi
+
 # Activate venv
 if [ -d "venv" ]; then
     source venv/bin/activate

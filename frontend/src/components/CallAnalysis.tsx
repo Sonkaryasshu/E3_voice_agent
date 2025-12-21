@@ -52,6 +52,13 @@ export const CallAnalysis: FC<CallAnalysisProps> = ({ call }) => {
         }
     };
 
+    const formatTime = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
+
     return (
         <div className="space-y-4">
             {/* AI Summary Card */}
@@ -121,10 +128,10 @@ export const CallAnalysis: FC<CallAnalysisProps> = ({ call }) => {
                                         <button
                                             onClick={() => handleSeek(timestamp as number)}
                                             className="flex-shrink-0 text-[10px] flex items-center gap-1 text-blue-600 bg-blue-100 hover:bg-blue-200 px-1.5 py-0.5 rounded transition-colors font-medium mt-0.5 ml-2"
-                                            title={`Jump to ${timestamp}ms`}
+                                            title={`Jump to ${formatTime(timestamp as number)}`}
                                         >
                                             <PlayCircle size={10} />
-                                            {(timestamp / 1000).toFixed(1)}s
+                                            {formatTime(timestamp as number)}
                                         </button>
                                     )}
                                 </div>

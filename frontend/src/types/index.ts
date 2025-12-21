@@ -29,7 +29,6 @@ export interface Call {
     load_number: string;
     metadata?: Record<string, any>;
     status: string;
-    transcript?: string;
     transcript_object?: Array<{
         role: string;
         content: string;
