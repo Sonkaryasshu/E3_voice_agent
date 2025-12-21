@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import type { Agent, Call, TriggerCallRequest } from "../types";
-import { agentApi, callApi } from "../api/client";
-import { PhoneCall, Truck, Clock, Smartphone, Activity } from "lucide-react";
-import clsx from 'clsx';
+import { callApi, agentApi } from "../api/client";
 import { WebCallButton } from "../components/WebCallButton";
+import { CallAnalysis } from "../components/CallAnalysis";
+import { TranscriptViewer } from "../components/TranscriptViewer";
+import type { Agent, Call, TriggerCallRequest } from "../types";
+import clsx from "clsx";
+import { PhoneCall, Truck, Clock, Smartphone, Activity } from 'lucide-react';
 
 export const Dashboard = () => {
     const [agents, setAgents] = useState<Agent[]>([]);
@@ -248,11 +250,15 @@ export const Dashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="flex-1">
-                                <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Transcript</h3>
-                                <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 h-96 overflow-y-auto whitespace-pre-wrap font-sans text-sm text-slate-700 leading-relaxed">
-                                    {selectedCall.transcript || <span className="text-slate-400 italic">No transcript available.</span>}
-                                </div>
+                            {/* Call Analysis */}
+                            <div className="mb-6">
+                                <CallAnalysis call={selectedCall} />
+                            </div>
+
+                            {/* Transcript */}
+                            <div className="bg-white rounded-lg p-6 border border-slate-200">
+                                <h2 className="text-lg font-semibold text-slate-800 mb-4">Conversation Transcript</h2>
+                                <TranscriptViewer call={selectedCall} />
                             </div>
                         </div>
                     ) : (

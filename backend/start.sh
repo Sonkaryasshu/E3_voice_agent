@@ -8,11 +8,12 @@ if [ -z "$PUBLIC_URL" ] && [ -f .env ]; then
     export $(cat .env | xargs)
 fi
 
+# TODO: Agent check for all variables here and exit if any is missing
 if [ -z "$PUBLIC_URL" ]; then
-    echo "⚠️  WARNING: PUBLIC_URL is not set in .env"
+    echo "❌ PUBLIC_URL is not set in .env"
     echo "   Retell (Cloud) cannot connect to your Localhost WebSocket without it."
     echo "   Please use ngrok (or similar) and set PUBLIC_URL=your-ngrok-url.ngrok-free.app"
-    echo "   Continuing anyway..."
+    exit 1
 fi
 
 # Activate venv

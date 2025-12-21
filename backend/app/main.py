@@ -18,10 +18,8 @@ async def health_check():
 
 from app.routers import agents
 from app.routers import calls
-from app.routers import llm_websocket
 from app.routers import webhook
 
 app.include_router(agents.router)
 app.include_router(calls.router)
-app.include_router(llm_websocket.router)
 app.include_router(webhook.router)

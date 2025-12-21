@@ -30,6 +30,11 @@ export interface Call {
     metadata?: Record<string, any>;
     status: string;
     transcript?: string;
+    transcript_object?: Array<{
+        role: string;
+        content: string;
+        timestamp?: number;
+    }>;
     audio_url?: string;
     analysis_json?: Record<string, any>;
     created_at?: string;

@@ -25,22 +25,27 @@ async def handle_retell_status(request: Request):
         print(f"[WEBHOOK] Call ID: {call_id}")
         
         if event == "call_ended":
-            # Extract transcript from the call object
+            # Extract all relevant data from the call object
             transcript = call_data.get("transcript", "")
             transcript_object = call_data.get("transcript_object", [])
             recording_url = call_data.get("recording_url", "")
+            call_analysis = call_data.get("call_analysis", {})
             
             # If transcript is empty, try building from transcript_object
             if not transcript and transcript_object:
                 transcript = "\n".join([f"{t['role']}: {t['content']}" for t in transcript_object])
             
             print(f"[WEBHOOK] Transcript length: {len(transcript)} chars")
+            print(f"[WEBHOOK] Transcript object entries: {len(transcript_object)}")
             print(f"[WEBHOOK] Recording URL: {recording_url}")
+            print(f"[WEBHOOK] Analysis data: {call_analysis.keys() if call_analysis else 'None'}")
 
             update_data = {
                 "status": "completed",
                 "transcript": transcript,
-                "audio_url": recording_url
+                "transcript_object": transcript_object,  # Save structured data
+                "audio_url": recording_url,
+                "analysis_json": call_analysis  # Save analysis
             }
             
             print(f"[WEBHOOK] Updating call with retell_call_id={call_id}")

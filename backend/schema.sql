@@ -49,7 +49,9 @@ CREATE TABLE IF NOT EXISTS calls (
     metadata JSONB DEFAULT '{}'::jsonb,
     
     status TEXT DEFAULT 'initiated',
+    -- TODO: Agent remove 2 variables for transcript, store them in single column transcript_data JSONB
     transcript TEXT,
+    transcript_object JSONB, -- Array of {role, content, timestamp} for waterfall UI
     audio_url TEXT,
     
     -- Structured Analysis Data (Result of the call)

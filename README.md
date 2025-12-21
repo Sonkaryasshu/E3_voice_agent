@@ -1,6 +1,11 @@
 # AI Voice Agent Tool
 
-A full-stack web application to configure and test AI Voice Agents for logistics. Supports both Phone Calls and **Web Browser Calls** powered by Retell AI and OpenAI.
+A full-stack web application to configure and test AI Voice Agents for logistics. Supports **Web Browser Calls** (skipped phone call for this demo) powered by Retell AI.
+
+## Note:
+* **STS model**: skipping speech to speech models (more costly, but better quality)
+* **Performance**: voice lists caching and other performance related features are skipped for this demo
+* **Call transfer**: skipping call transfer for this demo
 
 ## Features
 *   **Agent Configuration**: Define system prompts and voice settings.
