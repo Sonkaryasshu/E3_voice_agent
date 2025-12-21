@@ -8,6 +8,8 @@ A full-stack web application to configure and test AI Voice Agents for logistics
 * **Call transfer**: skipping call transfer for this demo
 * **Single Prompt**: For this demo we are just using single system prompt, in real world we will be using multiple flows/prompts.
 
+[[Watch Demo]](https://www.loom.com/share/08e3ae23da29485fabb34d255a90cd4c)
+
 ## Features
 *   **Agent Configuration**: Define system prompts and voice settings.
 *   **Web Call Testing**: Test your agent directly in the browser (WebRTC).
