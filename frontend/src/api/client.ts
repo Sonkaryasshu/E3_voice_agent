@@ -50,5 +50,9 @@ export const callApi = {
         // We'll need to implement a list endpoint in backend if it doesn't exist
         const response = await api.get('/api/calls');
         return response.data;
+    },
+    analyze: async (id: string) => {
+        const response = await api.post(`/api/calls/${id}/analyze`);
+        return response.data;
     }
 };

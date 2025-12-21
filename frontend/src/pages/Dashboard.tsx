@@ -5,11 +5,12 @@ import { CallAnalysis } from "../components/CallAnalysis";
 import { TranscriptViewer } from "../components/TranscriptViewer";
 import type { Agent, Call, TriggerCallRequest } from "../types";
 import clsx from "clsx";
-import { PhoneCall, Truck, Clock, Smartphone, Activity } from 'lucide-react';
+import { PhoneCall, Truck, Clock, Smartphone, Activity, RefreshCw } from 'lucide-react';
 
 export const Dashboard = () => {
     const [agents, setAgents] = useState<Agent[]>([]);
     const [calls, setCalls] = useState<Call[]>([]);
+    const [analyzingCallId, setAnalyzingCallId] = useState<string | null>(null);
 
 
     // Trigger Form State
@@ -70,15 +71,33 @@ export const Dashboard = () => {
                 ...triggerForm
             });
             alert("Call triggered successfully!");
-            alert("Call triggered successfully!");
             setTriggerForm({ driver_name: "", driver_phone: "", load_number: "", metadata: {} });
             setMetadataText("");
             loadCalls();
         } catch (e) {
             console.error(e);
             alert("Failed to trigger call");
-        } finally {
+        }
+    };
 
+    const handleReAnalyze = async (callId: string) => {
+        if (analyzingCallId) return;
+        setAnalyzingCallId(callId);
+        try {
+            await callApi.analyze(callId);
+            loadCalls();
+            // If selected call is the one we analyzed, refresh details
+            if (selectedCall && selectedCall.id === callId) {
+                // Reload call details individually or just rely on loadCalls update
+                const updated = await callApi.get(callId);
+                setSelectedCall(updated);
+            }
+            alert("Analysis re-run successfully!");
+        } catch (e) {
+            console.error(e);
+            alert("Failed to re-analyze call");
+        } finally {
+            setAnalyzingCallId(null);
         }
     };
 
@@ -180,7 +199,12 @@ export const Dashboard = () => {
                                 )}
                             >
                                 <div className="flex justify-between items-start mb-1">
-                                    <span className="font-semibold text-slate-900">{call.driver_name}</span>
+                                    <div>
+                                        <span className="font-semibold text-slate-900 block">{call.driver_name}</span>
+                                        <span className="text-xs text-slate-500">
+                                            {agents.find(a => a.id === call.agent_id)?.name || "Unknown Agent"}
+                                        </span>
+                                    </div>
                                     <StatusBadge status={call.status} />
                                 </div>
                                 <div className="text-xs text-slate-500 flex items-center gap-2 mb-1">
@@ -211,53 +235,46 @@ export const Dashboard = () => {
                                 <div className="text-right">
                                     <div className="text-sm text-slate-500 mb-1">Status</div>
                                     <StatusBadge status={selectedCall.status} large />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                                {/* Analysis Card */}
-                                <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-                                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Structured Analysis</h3>
-                                    {selectedCall.analysis_json ? (
-                                        <div className="space-y-2">
-                                            {Object.entries(selectedCall.analysis_json).map(([k, v]) => (
-                                                <div key={k} className="flex justify-between items-start text-sm border-b border-slate-200 pb-1 last:border-0">
-                                                    <span className="text-slate-500 capitalize">{k.replace(/_/g, " ")}:</span>
-                                                    <span className="font-medium text-slate-900 text-right">{String(v)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-slate-400 text-sm italic">Analysis pending or not available...</div>
-                                    )}
-                                </div>
-
-                                {/* Audio/Debug Info */}
-                                <div className="space-y-4">
-                                    {selectedCall.audio_url && (
-                                        <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-                                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Recording</h3>
-                                            <audio controls src={selectedCall.audio_url} className="w-full h-8" />
-                                        </div>
-                                    )}
-                                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-                                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Metadata</h3>
-                                        <div className="text-xs font-mono text-slate-600 break-all">
-                                            Internal ID: {selectedCall.id}<br />
-                                            Retell ID: {selectedCall.retell_call_id}
-                                        </div>
+                                    <div className="mt-2">
+                                        <button
+                                            onClick={() => handleReAnalyze(selectedCall.id)}
+                                            disabled={analyzingCallId === selectedCall.id}
+                                            className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                                        >
+                                            <RefreshCw size={12} className={analyzingCallId === selectedCall.id ? "animate-spin" : ""} />
+                                            {analyzingCallId === selectedCall.id ? "Analyzing..." : "Analyze Again"}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Call Analysis */}
+                            {/* 1. Analyzed Data & Summary */}
                             <div className="mb-6">
                                 <CallAnalysis call={selectedCall} />
                             </div>
 
-                            {/* Transcript */}
-                            <div className="bg-white rounded-lg p-6 border border-slate-200">
-                                <h2 className="text-lg font-semibold text-slate-800 mb-4">Conversation Transcript</h2>
+                            {/* 2. Audio Player - Full Width, Standard Controls */}
+                            {selectedCall.audio_url && (
+                                <div className="bg-slate-900 rounded-xl p-4 mb-6 shadow-md text-white sticky top-4 z-10">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Audio Recording</h3>
+                                        <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">ID: {selectedCall.retell_call_id}</span>
+                                    </div>
+                                    <audio
+                                        id="main-audio-player"
+                                        controls
+                                        src={selectedCall.audio_url}
+                                        className="w-full h-10 accent-blue-500"
+                                        style={{ filter: "invert(1) hue-rotate(180deg)" }} // Quick trick for dark mode player
+                                    />
+                                </div>
+                            )}
+
+                            {/* 3. Transcript Waterfall */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <h2 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
+                                    <span>💬</span> Transcript
+                                </h2>
                                 <TranscriptViewer call={selectedCall} />
                             </div>
                         </div>
@@ -280,6 +297,7 @@ const StatusBadge = ({ status, large }: { status: string, large?: boolean }) => 
         dialing: "bg-blue-100 text-blue-700",
         "in-progress": "bg-amber-100 text-amber-700",
         completed: "bg-green-100 text-green-700",
+        analyzed: "bg-purple-100 text-purple-700",
         failed: "bg-red-100 text-red-700",
     };
     // @ts-ignore

@@ -4,6 +4,8 @@ from app.schemas import TriggerCallRequest
 import os
 from retell import Retell
 from typing import Dict, Any
+import requests
+from app.services.analysis import analyze_call_transcript
 
 router = APIRouter(prefix="/api/calls", tags=["calls"])
 
@@ -86,4 +88,71 @@ async def list_calls():
     # Order by created_at desc
     res = supabase.table("calls").select("*").order("created_at", desc=True).limit(50).execute()
     return res.data
+
+
+@router.post("/{call_id}/analyze")
+async def manual_analyze_call(call_id: str):
+    """
+    Manually fetch call data from Retell and run analysis.
+    Useful for retrying failed webhooks or re-analyzing.
+    """
+    try:
+        retell_api_key = os.environ.get("RETELL_API_KEY")
+        if not retell_api_key:
+            raise HTTPException(status_code=500, detail="RETELL_API_KEY not set")
+
+        # 1. Fetch latest call state from Retell
+        # We use the Retell Call ID (which should be passed as call_id, or we lookup from DB ID)
+        
+        # Check if it's a UUID (our DB ID)
+        db_call = supabase.table("calls").select("*").eq("id", call_id).execute()
+        
+        retell_call_id = call_id
+        if db_call.data:
+            retell_call_id = db_call.data[0]['retell_call_id']
+        
+        # Fetch from Retell
+        headers = {"Authorization": f"Bearer {retell_api_key}"}
+        resp = requests.get(f"https://api.retellai.com/v2/get-call/{retell_call_id}", headers=headers)
+        
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=f"Retell API Error: {resp.text}")
+            
+        call_data = resp.json()
+        
+        # 2. Extract Data
+        transcript_object = call_data.get("transcript_object", [])
+        recording_url = call_data.get("recording_url", "")
+        call_status = call_data.get("call_status", "ended") # "ended"
+        
+        if not transcript_object:
+             return {"message": "No transcript available yet", "status": "skipped"}
+
+        # 3. Save Updated Info to DB
+        update_data = {
+            "transcript_object": transcript_object,
+            "audio_url": recording_url,
+        }
+        
+        # If call ended, update status to completed (if not already)
+        if call_status == "ended":
+             update_data["status"] = "completed"
+
+        supabase.table("calls").update(update_data).eq("retell_call_id", retell_call_id).execute()
+
+        # 4. Run Analysis
+        print(f"[MANUAL ANALYSIS] Starting analysis for {retell_call_id}")
+        analysis_result = analyze_call_transcript(transcript_object)
+        
+        final_update = {
+            "status": "analyzed",
+            "analysis_json": analysis_result
+        }
+        supabase.table("calls").update(final_update).eq("retell_call_id", retell_call_id).execute()
+        
+        return {"success": True, "analysis": analysis_result}
+
+    except Exception as e:
+        print(f"Manual analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 

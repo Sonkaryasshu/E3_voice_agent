@@ -41,7 +41,7 @@ async def create_agent_config(agent: AgentConfigCreate):
                 {
                     "type": "end_call",
                     "name": "end_call",
-                    "description": "End the call with user."
+                    "description": "End the call when the conversation is finished or if the user requests it."
                 }
             ]
         }
@@ -65,8 +65,9 @@ async def create_agent_config(agent: AgentConfigCreate):
             },
             voice_id=agent.voice_id,
             agent_name=agent.name,
-            interruption_sensitivity=vs.get("interruption_sensitivity", 1.0),
+            interruption_sensitivity=vs.get("interruption_sensitivity", 0.9),
             responsiveness=vs.get("responsiveness", 1.0),
+            # TODO: Agent check if we have temperature support
             voice_temperature=vs.get("voice_temperature", 1.0),
             enable_backchannel=vs.get("backchanneling_enabled", True),
             webhook_url=webhook_url
